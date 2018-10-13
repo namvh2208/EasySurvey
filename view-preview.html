@@ -1,0 +1,208 @@
+<html>
+	<head>
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+		<!-- Bootstrap core CSS -->
+		<link href="mdbootstrap/css/bootstrap.min.css" rel="stylesheet">
+		<!-- Material Design Bootstrap -->
+		<link href="mdbootstrap/css/mdb.min.css" rel="stylesheet">
+		<link rel="stylesheet" type="text/css" href="css/joint.css"/>
+		
+		<script src="js/jquery.js"></script>
+		<script src="js/lodash.js"></script>
+		<script src="js/backbone.js"></script>
+		<script src="js/joint.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/vue@2.5.17/dist/vue.js"></script>
+		<script src="js/jquery.scrollTo.js"></script>
+		
+		
+		<style> 
+			#shapes{padding:0;}
+			#shapes li{padding:8px; list-style: none; cursor:pointer}
+			#shapes li.active {background:#00abff; color:#fff;}
+
+			#placeholder {
+			  mix-blend-mode: hard-light;
+			  height:100%;
+			  overflow:auto;
+			  -webkit-mask-image: linear-gradient(to bottom, 
+				rgba(255,255,255,0), 
+				rgba(255,255,255,1), 
+				rgba(255,255,255,1), 
+				rgba(255,255,255,1), 
+				rgba(255,255,255,0));
+			}
+			::-webkit-scrollbar {
+				width: 0px;  /* remove scrollbar space */
+				background: transparent;  /* optional: just make scrollbar invisible */
+}
+			
+			
+			
+			
+			.flex-container{display:flex;}
+			
+			.button{display:block;width:100%; padding:8px; margin-bottom:8px; background:#fff; border:solid 1px #00abff; color:#00abff; border-radius:20px; cursor:pointer;}
+			.button:hover{background:#00abff; color:#fff;}
+			
+			.btn-rounded{border-radius:10em}
+			
+			.ShortAnswer{background:#42a5f5;}
+			.LongAnswer{background:#aa66cc;}
+			.Multiple{background:#7cb342;}
+			.Radio{background:#ffbb33;}
+			.YesNo{background:#ec407a;}
+			
+			.question {margin:4px; padding:8px;background:#fff;box-shadow:0 2px 5px 0 rgba(0,0,0,.16), 0 2px 10px 0 rgba(0,0,0,.12); border-left:solid 4px #fff;}
+			
+			#placeholder >.active {border-left:solid 4px #b0e011;}
+			.question:hover {cursor:pointer; border-left:solid 4px #888;}
+			.question-type-icon{margin:0;color:white; text-shadow: rgb(48, 117, 165) 2px 2px 3px; height: 40px; width: 40px; line-height: 40px; border-radius: 50%; text-align: center;}
+			
+			.center-block{display:block; margin-left:auto; margin-right:auto;}
+			
+			
+			.blank{    
+				padding: 4px 40px;
+				background: #fff;
+				border: solid 1px #aaa;
+				border-radius: 8px;
+				margin: 4px;
+				-moz-box-shadow: inset 0 0 4px #ccc;
+			    -webkit-box-shadow: inset 0 0 4px #ccc;
+			    box-shadow: inset 0 0 4px #ccc;}
+		</style>
+	</head>
+
+	<body class="aqua-gradient">
+
+		<div id = "main" class="container">
+			<div class="row">
+		
+				
+				<!--QUESTIONS-->
+				<div class="col-sm-12">
+					<div id="placeholder">
+						<div style="height:1000px"></div>
+					
+						<!--QUESTION-->
+						<div class = "question m-3 p-3"
+							v-on:click.self="scrollToQuestion(q.id)"
+							v-for="q in questions"  
+							v-bind:class="q.isActive" 
+							v-bind:id="'question_'+q.id" 
+							v-if="isVisible(q)">
+							<!--div class="col-sm-1"><p class="question-type-icon"  v-bind:class="q.type" >{{shortType(q.type)}}</p></div-->
+							{{q.id}}. 
+							<p v-html="compileString(q.caption)"> </p>
+							
+							
+							<!--ShortAnswer-->
+							<div class="md-form" 
+								v-if="q.type=='ShortAnswer'" >
+								<input type="text" class="form-control" placeholder="Enter your answer here..." 
+									v-model="q.answer" />							
+							</div>
+							
+							<!--LongAnswer-->
+							<div class="md-form" 
+								v-if="q.type=='LongAnswer'" >
+								<textarea class="form-control" rows="3" placeholder="Enter your answer here..."></textarea>
+							</div>
+							
+							<!--Multiple-->
+							<div class="custom-control custom-checkbox" 
+								v-if="q.type=='Multiple'" 
+								v-for="(opt, index) in q.options">
+								
+								<input type="checkbox" class="custom-control-input" 
+									v-bind:id="'question_'+q.id+'_option_'+index" 
+									v-bind:value="index" 
+									v-model="q.answers">
+								<label class="custom-control-label" 
+									v-bind:for="'question_'+q.id+'_option_'+index">{{index}} - 
+									<span v-html="compileString(opt)"><span>
+								</label>
+							</div>
+							
+							<!--Radio-->
+							<div class="custom-control custom-radio" 
+								v-if="q.type=='Radio'" 
+								v-for="(opt, index) in q.options">
+								<input type="radio" class="custom-control-input" 
+									v-bind:id="'question_'+q.id+'_radio_'+index" 
+									v-bind:value="index" 
+									v-model="q.answer"
+									v-on:change="moveToNextQuestion(q)">
+								<label class="custom-control-label" 
+									v-bind:for="'question_'+q.id+'_radio_'+index">{{index}} - 
+									<span v-html="compileString(opt)"><span>
+								</label>
+							</div>
+							
+							
+							<!--YesNo-->
+							<div class="md-form text-center" 
+								v-if="q.type=='YesNo'" >
+								
+								<!--Yes-->
+								<div class="custom-control custom-radio custom-control-inline mx-5">
+								  <input type="radio" class="custom-control-input" value="Y"
+									  v-bind:id="'question_'+q.id+'_radioYes'"  
+									  v-model="q.answer" 
+									  v-on:change="moveToNextQuestion(q)">
+									  
+								  <label class="custom-control-label" 
+									v-bind:for="'question_'+q.id+'_radioYes'">Yes</label>
+								</div>
+								
+								<!--No-->
+								<div class="custom-control custom-radio custom-control-inline mx-5">
+								  <input type="radio" class="custom-control-input" value="N"
+									  v-bind:id="'question_'+q.id+'_radioNo'"
+									  v-model="q.answer" 
+									  v-on:change="moveToNextQuestion(q)">
+									  
+								  <label class="custom-control-label" 
+									v-bind:for="'question_'+q.id+'_radioNo'">No</label>
+								</div>
+								<!--button v-on:click="q.answer='Y'" class="btn light-blue accent-4 btn-rounded">Yes</button>
+								<button v-on:click="q.answer='N'" class="btn light-blue accent-4 btn-rounded">No</button-->
+							</div>
+							
+							
+							
+							
+							
+							<!--GetNext button-->
+							<button class="btn light-blue accent-4 btn-rounded" 
+								v-on:click="moveToNextQuestion(q)"
+								v-if="['ShortAnswer', 'LongAnswer', 'Multiple'].includes(q.type)">
+								
+								Next
+							</button>
+							
+							
+							
+						</div>
+						<!--END QUESTION-->
+						
+						
+						<div style="height:1000px"></div>
+						
+					</div>
+				</div>
+				<!--END QUESTIONS-->
+				
+
+				
+			</div>
+		</div>
+		<script type="text/javascript" src="mdbootstrap/js/popper.min.js"></script>
+		<!-- Bootstrap core JavaScript -->
+		<script type="text/javascript" src="mdbootstrap/js/bootstrap.min.js"></script>
+		<!-- MDB core JavaScript -->
+		<script type="text/javascript" src="mdbootstrap/js/mdb.min.js"></script>
+		
+		<script src="js/view-preview.js"></script>
+	</body>
+</html>
